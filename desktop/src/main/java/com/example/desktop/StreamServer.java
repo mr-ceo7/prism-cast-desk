@@ -88,6 +88,7 @@ public class StreamServer {
     /** Start the HTTP server. */
     public void start() throws IOException {
         server = HttpServer.create(new InetSocketAddress(port), 0);
+        server.setExecutor(java.util.concurrent.Executors.newCachedThreadPool());
 
         server.createContext("/", ex -> {
             if (passwordEnabled) {
@@ -283,7 +284,7 @@ public class StreamServer {
             + ".wrap{max-width:1280px;margin:0 auto;padding:20px}"
             + ".header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}"
             + ".brand{display:flex;align-items:center;gap:12px}"
-            + ".brand-icon{width:40px;height:40px;background:#D0BCFF;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px}"
+            + ".brand-icon{width:40px;height:40px;object-fit:contain;border-radius:10px}"
             + ".brand h1{font-size:18px;color:#fff;letter-spacing:-.5px}"
             + ".brand p{font-size:12px;color:#CAC4D0}"
             + ".brand-by{font-size:9px;color:#D0BCFF;font-weight:700;letter-spacing:1px;margin-top:2px;text-transform:uppercase}"
@@ -306,7 +307,7 @@ public class StreamServer {
             + "</style></head><body>"
             + "<div class='wrap'>"
             + "<div class='header'>"
-            + "<div class='brand'><div class='brand-icon'>&#x1F4E1;</div><div><h1>Prism Cast</h1><p class='brand-by'>by Galvaniy Studios</p></div></div>"
+            + "<div class='brand'><img class='brand-icon' src='/icon.png' alt='Prism Cast Logo'><div><h1>Prism Cast</h1><p class='brand-by'>by Galvaniy Studios</p></div></div>"
             + "<div class='badge'><span class='live-dot'></span>LIVE</div>"
             + "</div>"
             + "<div class='panel'>"
