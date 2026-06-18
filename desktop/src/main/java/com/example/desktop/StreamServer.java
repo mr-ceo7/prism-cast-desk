@@ -172,6 +172,22 @@ public class StreamServer {
             try (OutputStream os = ex.getResponseBody()) { os.write(data); }
         });
 
+        server.createContext("/icon.png", ex -> {
+            try (java.io.InputStream is = StreamServer.class.getResourceAsStream("/icon.png")) {
+                if (is != null) {
+                    byte[] data = is.readAllBytes();
+                    ex.getResponseHeaders().add("Content-Type", "image/png");
+                    ex.getResponseHeaders().add("Cache-Control", "public, max-age=86400");
+                    ex.sendResponseHeaders(200, data.length);
+                    try (OutputStream os = ex.getResponseBody()) { os.write(data); }
+                } else {
+                    ex.sendResponseHeaders(404, -1);
+                }
+            } catch (Exception e) {
+                ex.sendResponseHeaders(500, -1);
+            }
+        });
+
         server.start();
     }
 
@@ -270,36 +286,51 @@ public class StreamServer {
             + ".brand-icon{width:40px;height:40px;background:#D0BCFF;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px}"
             + ".brand h1{font-size:18px;color:#fff;letter-spacing:-.5px}"
             + ".brand p{font-size:12px;color:#CAC4D0}"
+            + ".brand-by{font-size:9px;color:#D0BCFF;font-weight:700;letter-spacing:1px;margin-top:2px;text-transform:uppercase}"
             + ".live-dot{width:8px;height:8px;background:#FF4444;border-radius:50%;display:inline-block;margin-right:6px;animation:pulse 1.5s infinite}"
             + "@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}"
             + ".badge{background:rgba(0,0,0,.4);padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;letter-spacing:1px;display:flex;align-items:center;gap:6px}"
             + ".panel{background:#2B2930;border-radius:20px;overflow:hidden;border:1px solid #49454F;box-shadow:0 12px 40px rgba(0,0,0,.4)}"
             + ".top-bar{padding:12px 18px;display:flex;justify-content:space-between;align-items:center;background:#232128;border-bottom:1px solid #49454F}"
-            + ".secure{background:#EADDFF;color:#21005D;padding:4px 10px;border-radius:8px;font-size:10px;font-weight:700;letter-spacing:.5px}"
+            + ".actions{display:flex;align-items:center;gap:8px}"
+            + ".fullscreen-btn{background:#D0BCFF;color:#21005D;border:none;padding:5px 12px;border-radius:8px;font-size:10px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:all 0.2s}"
+            + ".fullscreen-btn:hover{background:#EADDFF;transform:scale(1.02)}"
+            + ".secure{background:rgba(234,221,255,0.15);color:#D0BCFF;border:1px solid rgba(208,188,255,0.3);padding:4px 10px;border-radius:8px;font-size:10px;font-weight:700;letter-spacing:.5px}"
             + "img.stream{width:100%;display:block;background:#0f0e12;min-height:400px;object-fit:contain}"
             + ".stats{display:flex;gap:10px;margin-top:16px}"
             + ".stat{flex:1;background:#2B2930;border:1px solid #49454F;border-radius:16px;padding:14px;text-align:center}"
             + ".stat-val{font-size:20px;font-weight:700;color:#D0BCFF}"
             + ".stat-lbl{font-size:9px;font-weight:700;color:#938F99;letter-spacing:.5px;margin-top:4px}"
-            + ".footer{text-align:center;margin-top:24px;font-size:11px;color:#49454F}"
+            + ".footer{text-align:center;margin-top:24px;font-size:11px;color:#938F99;line-height:1.6}"
+            + ".footer-brand{color:#D0BCFF;font-weight:700;letter-spacing:1px;font-size:10px;text-transform:uppercase;margin-top:4px;display:block}"
             + "</style></head><body>"
             + "<div class='wrap'>"
             + "<div class='header'>"
-            + "<div class='brand'><div class='brand-icon'>&#x1F4E1;</div><div><h1>Prism Cast</h1><p><span class='live-dot'></span>Stream Active • Desktop</p></div></div>"
+            + "<div class='brand'><div class='brand-icon'>&#x1F4E1;</div><div><h1>Prism Cast</h1><p class='brand-by'>by Galvaniy Studios</p></div></div>"
             + "<div class='badge'><span class='live-dot'></span>LIVE</div>"
             + "</div>"
             + "<div class='panel'>"
-            + "<div class='top-bar'><strong style='font-size:13px'>Desktop Screen Stream</strong><span class='secure'>&#128274; E2EE SECURE</span></div>"
-            + "<img class='stream' src='/stream' alt='Prism Cast desktop stream'>"
+            + "<div class='top-bar'><strong style='font-size:13px'>Desktop Screen Stream</strong>"
+            + "<div class='actions'><button class='fullscreen-btn' onclick='toggleFullscreen()'>⛶ Maximize</button><span class='secure'>&#128274; E2EE SECURE</span></div></div>"
+            + "<img id='stream-view' class='stream' src='/stream' alt='Prism Cast desktop stream'>"
             + "</div>"
             + "<div class='stats'>"
             + "<div class='stat'><div class='stat-val' id='latency'>—</div><div class='stat-lbl'>LATENCY</div></div>"
             + "<div class='stat'><div class='stat-val' id='status'>Connected</div><div class='stat-lbl'>STATUS</div></div>"
             + "<div class='stat'><div class='stat-val' id='quality'>HD</div><div class='stat-lbl'>QUALITY</div></div>"
             + "</div>"
-            + "<div class='footer'>Prism Cast Desktop • Secure Screen Broadcasting</div>"
+            + "<div class='footer'>Prism Cast Desktop • Secure Screen Broadcasting"
+            + "<span class='footer-brand'>Galvaniy Studios</span></div>"
             + "</div>"
             + "<script>"
+            + "function toggleFullscreen(){"
+            + "  let img = document.getElementById('stream-view');"
+            + "  if(!document.fullscreenElement){"
+            + "    img.requestFullscreen().catch(err=>alert('Error enabling fullscreen: '+err.message));"
+            + "  } else {"
+            + "    document.exitFullscreen();"
+            + "  }"
+            + "}"
             + "setInterval(async()=>{try{let s=performance.now();await fetch('/api/status');let e=performance.now();document.getElementById('latency').textContent=Math.round(e-s)+'ms'}catch(e){document.getElementById('status').textContent='Disconnected'}},2000);"
             + "</script>"
             + "</body></html>";

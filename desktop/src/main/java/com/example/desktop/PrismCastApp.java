@@ -57,6 +57,11 @@ public class PrismCastApp {
 
         server = new StreamServer();
         frame = new JFrame("Prism Cast Desktop");
+        try (java.io.InputStream is = PrismCastApp.class.getResourceAsStream("/icon.png")) {
+            if (is != null) {
+                frame.setIconImage(javax.imageio.ImageIO.read(is));
+            }
+        } catch (Exception ignored) {}
         frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         frame.setSize(1100, 780);
         frame.setMinimumSize(new Dimension(800, 600));

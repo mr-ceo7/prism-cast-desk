@@ -16,3 +16,8 @@
 local.properties
 .env
 debug.keystore
+
+# Desktop custom releases and icons
+/release-builds/
+/desktop/icon.png
+/desktop/src/main/resources/icon.png
