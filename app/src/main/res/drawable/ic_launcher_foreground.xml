@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Broadcast Cast Waves -->
+    <path
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M34,44 C34,44 40,36 54,36 C68,36 74,44 74,44" />
+    <path
+        android:strokeColor="#00E676"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M42,50 C42,50 46,45 54,45 C62,45 66,50 66,50" />
+    <!-- TV monitor panel -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M32,54 H76 V68 C76,70.2 74.2,72 72,72 H36 C33.8,72 32,70.2 32,68 Z" />
+    <!-- TV panel stand stand -->
+    <path
+        android:fillColor="#00E676"
+        android:pathData="M48,72h12v4h-12z M42,76h24v2h-24z" />
+</vector>

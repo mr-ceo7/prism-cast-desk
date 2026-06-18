@@ -1,0 +1,6 @@
+{
+  "name": "Prism Cast",
+  "description": "Provides secure, ultra-low latency wireless screen broadcasting with remote dashboards, motion alarms, and session recording.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
