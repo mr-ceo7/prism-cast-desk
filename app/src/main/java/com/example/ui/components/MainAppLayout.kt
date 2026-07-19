@@ -3,8 +3,10 @@ package com.example.ui.components
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -43,6 +45,7 @@ import com.example.data.model.MotionLog
 import com.example.data.model.SessionRecord
 import com.example.data.model.StreamSettings
 import com.example.ui.ScreenStreamViewModel
+import com.example.ui.PlaybackState
 import com.example.ui.theme.*
 import kotlinx.coroutines.delay
 import java.io.File
@@ -58,69 +61,86 @@ fun MainAppLayout(
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val isStreaming by viewModel.isStreaming.collectAsStateWithLifecycle()
+    var isPlayerFullscreen by remember { mutableStateOf(false) }
 
     Scaffold(
         bottomBar = {
-            NavigationBar(
-                modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
-                containerColor = SleekCardSurface,
-            ) {
-                NavigationBarItem(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    icon = { Icon(Icons.Default.Dvr, "Dashboard") },
-                    label = { Text("Server", fontSize = 11.sp, fontWeight = FontWeight.Medium) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = SleekStatusText,
-                        selectedTextColor = SleekAccentLavender,
-                        unselectedIconColor = SleekTextSecondary,
-                        unselectedTextColor = SleekTextSecondary,
-                        indicatorColor = SleekStatusBg
-                    ),
-                    modifier = Modifier.testTag("nav_dashboard")
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Default.Settings, "Config") },
-                    label = { Text("Settings", fontSize = 11.sp, fontWeight = FontWeight.Medium) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = SleekStatusText,
-                        selectedTextColor = SleekAccentLavender,
-                        unselectedIconColor = SleekTextSecondary,
-                        unselectedTextColor = SleekTextSecondary,
-                        indicatorColor = SleekStatusBg
-                    ),
-                    modifier = Modifier.testTag("nav_settings")
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
-                    icon = { Icon(Icons.Default.History, "Recordings") },
-                    label = { Text("Sessions", fontSize = 11.sp, fontWeight = FontWeight.Medium) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = SleekStatusText,
-                        selectedTextColor = SleekAccentLavender,
-                        unselectedIconColor = SleekTextSecondary,
-                        unselectedTextColor = SleekTextSecondary,
-                        indicatorColor = SleekStatusBg
-                    ),
-                    modifier = Modifier.testTag("nav_recordings")
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 3,
-                    onClick = { selectedTab = 3 },
-                    icon = { Icon(Icons.Default.Security, "Alerts") },
-                    label = { Text("Motion Logs", fontSize = 11.sp, fontWeight = FontWeight.Medium) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = SleekStatusText,
-                        selectedTextColor = SleekAccentLavender,
-                        unselectedIconColor = SleekTextSecondary,
-                        unselectedTextColor = SleekTextSecondary,
-                        indicatorColor = SleekStatusBg
-                    ),
-                    modifier = Modifier.testTag("nav_alerts")
-                )
+            if (!isPlayerFullscreen) {
+                NavigationBar(
+                    modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
+                    containerColor = SleekCardSurface,
+                ) {
+                    NavigationBarItem(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        icon = { Icon(Icons.Default.Dvr, "Dashboard") },
+                        label = { Text("Server", fontSize = 11.sp, fontWeight = FontWeight.Medium) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = SleekStatusText,
+                            selectedTextColor = SleekAccentLavender,
+                            unselectedIconColor = SleekTextSecondary,
+                            unselectedTextColor = SleekTextSecondary,
+                            indicatorColor = SleekStatusBg
+                        ),
+                        modifier = Modifier.testTag("nav_dashboard")
+                    )
+                    NavigationBarItem(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        icon = { Icon(Icons.Default.LiveTv, "Watch") },
+                        label = { Text("Watch", fontSize = 11.sp, fontWeight = FontWeight.Medium) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = SleekStatusText,
+                            selectedTextColor = SleekAccentLavender,
+                            unselectedIconColor = SleekTextSecondary,
+                            unselectedTextColor = SleekTextSecondary,
+                            indicatorColor = SleekStatusBg
+                        ),
+                        modifier = Modifier.testTag("nav_watch")
+                    )
+                    NavigationBarItem(
+                        selected = selectedTab == 2,
+                        onClick = { selectedTab = 2 },
+                        icon = { Icon(Icons.Default.Settings, "Config") },
+                        label = { Text("Settings", fontSize = 11.sp, fontWeight = FontWeight.Medium) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = SleekStatusText,
+                            selectedTextColor = SleekAccentLavender,
+                            unselectedIconColor = SleekTextSecondary,
+                            unselectedTextColor = SleekTextSecondary,
+                            indicatorColor = SleekStatusBg
+                        ),
+                        modifier = Modifier.testTag("nav_settings")
+                    )
+                    NavigationBarItem(
+                        selected = selectedTab == 3,
+                        onClick = { selectedTab = 3 },
+                        icon = { Icon(Icons.Default.History, "Recordings") },
+                        label = { Text("Sessions", fontSize = 11.sp, fontWeight = FontWeight.Medium) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = SleekStatusText,
+                            selectedTextColor = SleekAccentLavender,
+                            unselectedIconColor = SleekTextSecondary,
+                            unselectedTextColor = SleekTextSecondary,
+                            indicatorColor = SleekStatusBg
+                        ),
+                        modifier = Modifier.testTag("nav_recordings")
+                    )
+                    NavigationBarItem(
+                        selected = selectedTab == 4,
+                        onClick = { selectedTab = 4 },
+                        icon = { Icon(Icons.Default.Security, "Alerts") },
+                        label = { Text("Motion Logs", fontSize = 11.sp, fontWeight = FontWeight.Medium) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = SleekStatusText,
+                            selectedTextColor = SleekAccentLavender,
+                            unselectedIconColor = SleekTextSecondary,
+                            unselectedTextColor = SleekTextSecondary,
+                            indicatorColor = SleekStatusBg
+                        ),
+                        modifier = Modifier.testTag("nav_alerts")
+                    )
+                }
             }
         },
         containerColor = SleekMidnightBack
@@ -128,13 +148,14 @@ fun MainAppLayout(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(if (isPlayerFullscreen) PaddingValues(0.dp) else innerPadding)
         ) {
             when (selectedTab) {
                 0 -> DashboardScreen(viewModel, onStartCasting, onStopCasting)
-                1 -> SettingsScreen(viewModel)
-                2 -> SessionRecordsScreen(viewModel)
-                3 -> MotionLogsScreen(viewModel)
+                1 -> StreamPlayerScreen(viewModel, isFullscreen = isPlayerFullscreen, onFullscreenToggle = { isPlayerFullscreen = it })
+                2 -> SettingsScreen(viewModel)
+                3 -> SessionRecordsScreen(viewModel)
+                4 -> MotionLogsScreen(viewModel)
             }
         }
     }
@@ -1464,3 +1485,434 @@ fun LocalImageFromPath(path: String, modifier: Modifier = Modifier) {
         Box(modifier = modifier.background(Color.DarkGray))
     }
 }
+
+@Composable
+fun StreamPlayerScreen(
+    viewModel: ScreenStreamViewModel,
+    isFullscreen: Boolean,
+    onFullscreenToggle: (Boolean) -> Unit
+) {
+    val settings by viewModel.settingsState.collectAsStateWithLifecycle()
+    val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
+    val playbackBitmap by viewModel.playbackBitmap.collectAsStateWithLifecycle()
+    val playbackError by viewModel.playbackError.collectAsStateWithLifecycle()
+    val scannedDevices by viewModel.scannedDevices.collectAsStateWithLifecycle()
+    val isScanning by viewModel.isScanning.collectAsStateWithLifecycle()
+
+    var inputUrl by remember { mutableStateOf("") }
+    var inputPasscode by remember { mutableStateOf("") }
+
+    LaunchedEffect(settings) {
+        if (inputUrl.isEmpty() && settings.lastPlayedStreamUrl.isNotEmpty()) {
+            inputUrl = settings.lastPlayedStreamUrl
+            inputPasscode = settings.lastPlayedStreamPasscode
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.startSubnetScan()
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.stopSubnetScan()
+        }
+    }
+
+    if (isFullscreen) {
+        BackHandler(enabled = true) {
+            onFullscreenToggle(false)
+        }
+        
+        val context = LocalContext.current
+        val activity = remember(context) { context as? androidx.activity.ComponentActivity }
+        DisposableEffect(Unit) {
+            activity?.window?.let { window ->
+                androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+                    hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                    systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                }
+            }
+            onDispose {
+                activity?.window?.let { window ->
+                    androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+                        show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                    }
+                }
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black),
+            contentAlignment = Alignment.Center
+        ) {
+            if (playbackBitmap != null) {
+                Image(
+                    bitmap = playbackBitmap!!.asImageBitmap(),
+                    contentDescription = "Fullscreen Stream View",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+            } else {
+                CircularProgressIndicator(color = SleekAccentLavender)
+            }
+
+            IconButton(
+                onClick = { onFullscreenToggle(false) },
+                modifier = Modifier
+                    .padding(24.dp)
+                    .align(Alignment.TopEnd)
+                    .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.FullscreenExit,
+                    contentDescription = "Exit Fullscreen",
+                    tint = Color.White
+                )
+            }
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                Text(
+                    text = "WATCH REMOTE STREAM",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                Text(
+                    text = "Play MJPEG video streams from other Prism instances",
+                    fontSize = 11.sp,
+                    color = SleekTextSecondary
+                )
+            }
+
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = SleekCardSurface),
+                    border = BorderStroke(1.dp, SleekMutedBorder),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Text(
+                            text = "Target Stream Settings",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = SleekAccentLavender
+                        )
+
+                        OutlinedTextField(
+                            value = inputUrl,
+                            onValueChange = { inputUrl = it },
+                            label = { Text("Stream Server Address") },
+                            placeholder = { Text("e.g. 192.168.1.100:8080") },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = SleekAccentLavender,
+                                unfocusedBorderColor = SleekMutedBorder,
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White
+                            ),
+                            enabled = playbackState == PlaybackState.IDLE || playbackState == PlaybackState.ERROR,
+                            modifier = Modifier.fillMaxWidth().testTag("stream_player_url_input")
+                        )
+
+                        OutlinedTextField(
+                            value = inputPasscode,
+                            onValueChange = { inputPasscode = it },
+                            label = { Text("Stream Passcode (Optional)") },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = SleekAccentLavender,
+                                unfocusedBorderColor = SleekMutedBorder,
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White
+                            ),
+                            enabled = playbackState == PlaybackState.IDLE || playbackState == PlaybackState.ERROR,
+                            modifier = Modifier.fillMaxWidth().testTag("stream_player_passcode_input")
+                        )
+
+                        Button(
+                            onClick = {
+                                if (playbackState == PlaybackState.PLAYING || playbackState == PlaybackState.CONNECTING) {
+                                    viewModel.disconnectStream()
+                                } else {
+                                    viewModel.updateSettings(
+                                        settings.copy(
+                                            lastPlayedStreamUrl = inputUrl,
+                                            lastPlayedStreamPasscode = inputPasscode
+                                        )
+                                    )
+                                    viewModel.connectStream(inputUrl, inputPasscode)
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (playbackState == PlaybackState.PLAYING || playbackState == PlaybackState.CONNECTING) SleekIndicatorRed else SleekAccentLavender,
+                                contentColor = if (playbackState == PlaybackState.PLAYING || playbackState == PlaybackState.CONNECTING) Color.White else SleekStatusText
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth().height(48.dp).testTag("stream_player_connect_button")
+                        ) {
+                            Text(
+                                text = when (playbackState) {
+                                    PlaybackState.IDLE -> "Connect and Play"
+                                    PlaybackState.CONNECTING -> "Connecting..."
+                                    PlaybackState.PLAYING -> "Disconnect Stream"
+                                    PlaybackState.ERROR -> "Try Again"
+                                },
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Discovered Devices Card
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = SleekCardSurface),
+                    border = BorderStroke(1.dp, SleekMutedBorder),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Discovered Devices",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = SleekAccentLavender
+                            )
+                            if (isScanning) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    color = SleekAccentLavender,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                IconButton(
+                                    onClick = { viewModel.startSubnetScan() },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "Refresh Scan",
+                                        tint = SleekAccentLavender,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        if (scannedDevices.isEmpty()) {
+                            Text(
+                                text = if (isScanning) "Scanning local Wi-Fi subnet..." else "No other Prism instances found on Wi-Fi.",
+                                color = SleekMutedLabel,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        } else {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                scannedDevices.forEach { device ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(SleekMidnightBack)
+                                            .clickable {
+                                                inputUrl = "${device.ip}:${device.port}"
+                                                if (!device.isPasswordRequired) {
+                                                    inputPasscode = ""
+                                                }
+                                                viewModel.updateSettings(
+                                                    settings.copy(
+                                                        lastPlayedStreamUrl = "${device.ip}:${device.port}",
+                                                        lastPlayedStreamPasscode = if (device.isPasswordRequired) inputPasscode else ""
+                                                    )
+                                                )
+                                                viewModel.connectStream("${device.ip}:${device.port}", if (device.isPasswordRequired) inputPasscode else "")
+                                            }
+                                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = if (device.name.contains("Desktop")) Icons.Default.Devices else Icons.Default.PhoneAndroid,
+                                            contentDescription = "Device Icon",
+                                            tint = SleekAccentLavender,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = device.name,
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontSize = 13.sp,
+                                                color = Color.White
+                                            )
+                                            Text(
+                                                text = "${device.ip}:${device.port}",
+                                                fontSize = 11.sp,
+                                                color = SleekTextSecondary,
+                                                fontFamily = FontFamily.Monospace
+                                            )
+                                        }
+                                        Icon(
+                                            imageVector = if (device.isPasswordRequired) Icons.Default.Lock else Icons.Default.PlayArrow,
+                                            contentDescription = "Status",
+                                            tint = if (device.isPasswordRequired) SleekIndicatorRed else SleekAccentLime,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = SleekCardSurface),
+                    border = BorderStroke(1.dp, SleekMutedBorder),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f)
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        when (playbackState) {
+                            PlaybackState.PLAYING -> {
+                                if (playbackBitmap != null) {
+                                    Image(
+                                        bitmap = playbackBitmap!!.asImageBitmap(),
+                                        contentDescription = "Active Stream View",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                    
+                                    IconButton(
+                                        onClick = { onFullscreenToggle(true) },
+                                        modifier = Modifier
+                                            .align(Alignment.BottomEnd)
+                                            .padding(12.dp)
+                                            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Fullscreen,
+                                            contentDescription = "Enter Fullscreen",
+                                            tint = Color.White
+                                        )
+                                    }
+                                } else {
+                                    Column(
+                                        modifier = Modifier.fillMaxSize(),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        CircularProgressIndicator(color = SleekAccentLavender)
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = "Waiting for stream video frame...",
+                                            color = SleekTextSecondary,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                }
+                            }
+                            PlaybackState.CONNECTING -> {
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    CircularProgressIndicator(color = SleekAccentLavender)
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "Connecting to $inputUrl...",
+                                        color = SleekTextSecondary,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                            PlaybackState.ERROR -> {
+                                Column(
+                                    modifier = Modifier.fillMaxSize().padding(16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ErrorOutline,
+                                        contentDescription = "Error Icon",
+                                        tint = SleekIndicatorRed,
+                                        modifier = Modifier.size(44.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "Connection Failed",
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        text = playbackError ?: "Check server URL and network",
+                                        color = SleekIndicatorRed,
+                                        fontSize = 11.sp,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                }
+                            }
+                            PlaybackState.IDLE -> {
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.LiveTv,
+                                        contentDescription = "Standby Icon",
+                                        tint = SleekMutedLabel,
+                                        modifier = Modifier.size(44.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "Stream Player Standby",
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color.White,
+                                        fontSize = 13.sp
+                                    )
+                                    Text(
+                                        text = "Input a valid Prism Cast stream URL above to connect",
+                                        color = SleekMutedLabel,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

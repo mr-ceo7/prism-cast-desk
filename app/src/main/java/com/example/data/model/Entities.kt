@@ -17,7 +17,9 @@ data class StreamSettings(
     val audioSource: String = "Microphone", // "Microphone", "System Audio", "Muted"
     val isRemoteStreamingEnabled: Boolean = false,
     val remoteStreamUrl: String = "ws://10.0.2.2:8000/api/stream/ws/push",
-    val remoteStreamKey: String = "tambuatips_stream_secret_key"
+    val remoteStreamKey: String = "tambuatips_stream_secret_key",
+    val lastPlayedStreamUrl: String = "http://192.168.1.100:8080",
+    val lastPlayedStreamPasscode: String = ""
 )
 
 @Entity(tableName = "session_records")

@@ -165,7 +165,7 @@ public class StreamServer {
         });
 
         server.createContext("/api/status", ex -> {
-            String json = "{\"running\":true,\"viewers\":" + viewerCount.get() + "}";
+            String json = "{\"running\":true,\"viewers\":" + viewerCount.get() + ",\"passwordRequired\":" + passwordEnabled + "}";
             byte[] data = json.getBytes(StandardCharsets.UTF_8);
             ex.getResponseHeaders().add("Content-Type", "application/json");
             ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
