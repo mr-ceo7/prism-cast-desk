@@ -19,6 +19,10 @@ import com.example.service.StreamService
 import com.example.ui.ScreenStreamViewModel
 import com.example.ui.components.MainAppLayout
 import com.example.ui.theme.MyApplicationTheme
+import com.example.updater.AppUpdater
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -72,6 +76,12 @@ class MainActivity : ComponentActivity() {
         }
         neededPermissions.add(Manifest.permission.RECORD_AUDIO)
         permissionLauncher.launch(neededPermissions.toTypedArray())
+
+        // ── Auto-update ──
+        AppUpdater.scheduleUpdateChecks(applicationContext)
+        CoroutineScope(Dispatchers.Main).launch {
+            AppUpdater.checkNow(applicationContext)
+        }
 
         setContent {
             // Force dynamicTheme off and darkTheme on to lock our custom low-light Cyber Slate Theme
