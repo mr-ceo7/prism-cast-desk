@@ -40,6 +40,9 @@ jobs:
       - name: Create .env
         run: echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
 
+      - name: Decode debug keystore
+        run: base64 -d debug.keystore.base64 > debug.keystore
+
       - name: Build release APK
         run: ./gradlew :app:assembleRelease
 
