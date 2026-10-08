@@ -62,10 +62,12 @@ fun MainAppLayout(
     var selectedTab by remember { mutableIntStateOf(0) }
     val isStreaming by viewModel.isStreaming.collectAsStateWithLifecycle()
     var isPlayerFullscreen by remember { mutableStateOf(false) }
+    val isAmbientFullscreen by viewModel.isAmbientFullscreen.collectAsStateWithLifecycle()
+    val hideNavigation = isPlayerFullscreen || isAmbientFullscreen
 
     Scaffold(
         bottomBar = {
-            if (!isPlayerFullscreen) {
+            if (!hideNavigation) {
                 NavigationBar(
                     modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
                     containerColor = SleekCardSurface,
@@ -73,7 +75,21 @@ fun MainAppLayout(
                     NavigationBarItem(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
-                        icon = { Icon(Icons.Default.Dvr, "Dashboard") },
+                        icon = { Icon(Icons.Default.AutoAwesome, "Wall HUD") },
+                        label = { Text("Wall HUD", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color(0xFF00F0FF),
+                            selectedTextColor = Color(0xFF00F0FF),
+                            unselectedIconColor = SleekTextSecondary,
+                            unselectedTextColor = SleekTextSecondary,
+                            indicatorColor = Color(0xFF0F172A)
+                        ),
+                        modifier = Modifier.testTag("nav_ambient_hud")
+                    )
+                    NavigationBarItem(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        icon = { Icon(Icons.Default.Dvr, "Server") },
                         label = { Text("Server", fontSize = 11.sp, fontWeight = FontWeight.Medium) },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = SleekStatusText,
@@ -85,8 +101,8 @@ fun MainAppLayout(
                         modifier = Modifier.testTag("nav_dashboard")
                     )
                     NavigationBarItem(
-                        selected = selectedTab == 1,
-                        onClick = { selectedTab = 1 },
+                        selected = selectedTab == 2,
+                        onClick = { selectedTab = 2 },
                         icon = { Icon(Icons.Default.LiveTv, "Watch") },
                         label = { Text("Watch", fontSize = 11.sp, fontWeight = FontWeight.Medium) },
                         colors = NavigationBarItemDefaults.colors(
@@ -99,8 +115,8 @@ fun MainAppLayout(
                         modifier = Modifier.testTag("nav_watch")
                     )
                     NavigationBarItem(
-                        selected = selectedTab == 2,
-                        onClick = { selectedTab = 2 },
+                        selected = selectedTab == 3,
+                        onClick = { selectedTab = 3 },
                         icon = { Icon(Icons.Default.Settings, "Config") },
                         label = { Text("Settings", fontSize = 11.sp, fontWeight = FontWeight.Medium) },
                         colors = NavigationBarItemDefaults.colors(
@@ -113,8 +129,8 @@ fun MainAppLayout(
                         modifier = Modifier.testTag("nav_settings")
                     )
                     NavigationBarItem(
-                        selected = selectedTab == 3,
-                        onClick = { selectedTab = 3 },
+                        selected = selectedTab == 4,
+                        onClick = { selectedTab = 4 },
                         icon = { Icon(Icons.Default.History, "Recordings") },
                         label = { Text("Sessions", fontSize = 11.sp, fontWeight = FontWeight.Medium) },
                         colors = NavigationBarItemDefaults.colors(
@@ -127,10 +143,10 @@ fun MainAppLayout(
                         modifier = Modifier.testTag("nav_recordings")
                     )
                     NavigationBarItem(
-                        selected = selectedTab == 4,
-                        onClick = { selectedTab = 4 },
+                        selected = selectedTab == 5,
+                        onClick = { selectedTab = 5 },
                         icon = { Icon(Icons.Default.Security, "Alerts") },
-                        label = { Text("Motion Logs", fontSize = 11.sp, fontWeight = FontWeight.Medium) },
+                        label = { Text("Alerts", fontSize = 11.sp, fontWeight = FontWeight.Medium) },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = SleekStatusText,
                             selectedTextColor = SleekAccentLavender,
@@ -148,14 +164,15 @@ fun MainAppLayout(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(if (isPlayerFullscreen) PaddingValues(0.dp) else innerPadding)
+                .padding(if (hideNavigation) PaddingValues(0.dp) else innerPadding)
         ) {
             when (selectedTab) {
-                0 -> DashboardScreen(viewModel, onStartCasting, onStopCasting)
-                1 -> StreamPlayerScreen(viewModel, isFullscreen = isPlayerFullscreen, onFullscreenToggle = { isPlayerFullscreen = it })
-                2 -> SettingsScreen(viewModel)
-                3 -> SessionRecordsScreen(viewModel)
-                4 -> MotionLogsScreen(viewModel)
+                0 -> AmbientDashboardScreen(viewModel)
+                1 -> DashboardScreen(viewModel, onStartCasting, onStopCasting)
+                2 -> StreamPlayerScreen(viewModel, isFullscreen = isPlayerFullscreen, onFullscreenToggle = { isPlayerFullscreen = it })
+                3 -> SettingsScreen(viewModel)
+                4 -> SessionRecordsScreen(viewModel)
+                5 -> MotionLogsScreen(viewModel)
             }
         }
     }
@@ -252,6 +269,52 @@ fun DashboardScreen(
                         tint = Color.White,
                         modifier = Modifier.size(20.dp)
                     )
+                }
+            }
+        }
+
+        // Ambient Wall HUD Remote Indicator
+        item {
+            val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0A101D)),
+                border = BorderStroke(1.dp, Color(0xFF00F0FF).copy(alpha = 0.4f)),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF00F0FF))
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "AMBIENT WALL HUD & JARVIS",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF00F0FF),
+                                letterSpacing = 1.sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Phone Remote: $serverUrl/remote",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = FontFamily.Monospace,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }

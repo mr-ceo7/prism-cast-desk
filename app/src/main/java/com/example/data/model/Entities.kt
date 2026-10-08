@@ -39,3 +39,33 @@ data class MotionLog(
     val confidence: Int = 0, // motion dynamic difference
     val snapshotPath: String? = null // local file path to the saved screenshot
 )
+
+@Entity(tableName = "todo_items")
+data class TodoItem(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val text: String,
+    val isCompleted: Boolean = false,
+    val priority: String = "NORMAL", // "LOW", "NORMAL", "HIGH"
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "notepad_notes")
+data class NotepadNote(
+    @PrimaryKey val id: Int = 1,
+    val title: String = "Ambient Quick Notes",
+    val content: String = "",
+    val updatedAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "kpi_cards")
+data class KpiCard(
+    @PrimaryKey val id: String,
+    val title: String,
+    val value: String,
+    val unit: String = "",
+    val change: String? = null,
+    val status: String = "NORMAL", // "NORMAL", "WARNING", "SUCCESS", "INFO"
+    val iconName: String = "analytics",
+    val updatedAt: Long = System.currentTimeMillis()
+)
+

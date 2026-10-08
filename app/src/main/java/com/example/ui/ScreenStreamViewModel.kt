@@ -6,10 +6,9 @@ import android.graphics.BitmapFactory
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.database.AppDatabase
-import com.example.data.model.MotionLog
-import com.example.data.model.SessionRecord
-import com.example.data.model.StreamSettings
+import com.example.data.model.*
 import com.example.data.repository.StreamRepository
+import com.example.service.AmbientHubManager
 import com.example.service.StreamService
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -65,8 +64,45 @@ class ScreenStreamViewModel(application: Application) : AndroidViewModel(applica
 
     init {
         val db = AppDatabase.getDatabase(application)
-        repository = StreamRepository(db.settingsDao(), db.sessionRecordDao(), db.motionLogDao())
+        repository = StreamRepository(
+            db.settingsDao(),
+            db.sessionRecordDao(),
+            db.motionLogDao(),
+            db.todoDao(),
+            db.notepadDao(),
+            db.kpiCardDao()
+        )
+        AmbientHubManager.initialize(application)
     }
+
+    // Ambient HUD & Jarvis flows
+    val multimeterState: StateFlow<MultimeterTelemetry> = AmbientHubManager.multimeterState
+    val oscilloscopeState: StateFlow<OscilloscopeTelemetry> = AmbientHubManager.oscilloscopeState
+    val jarvisState: StateFlow<JarvisState> = AmbientHubManager.jarvisState
+    val isAmbientFullscreen: StateFlow<Boolean> = AmbientHubManager.isAmbientFullscreen
+    val serverUrl: StateFlow<String> = AmbientHubManager.serverUrl
+
+    // Room DB Todos, Notepad, and KPIs flows
+    val todosState: StateFlow<List<TodoItem>> = repository.todosFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val noteState: StateFlow<NotepadNote> = repository.noteFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = NotepadNote()
+        )
+
+    val kpisState: StateFlow<List<KpiCard>> = repository.kpisFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
     // Bind with the streaming service's static state flows
     val isStreaming: StateFlow<Boolean> = StreamService.isStreaming
@@ -95,6 +131,68 @@ class ScreenStreamViewModel(application: Application) : AndroidViewModel(applica
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    fun addTodo(text: String, priority: String = "NORMAL") {
+        viewModelScope.launch {
+            repository.addTodo(text, priority)
+        }
+    }
+
+    fun toggleTodo(id: Int, isCompleted: Boolean) {
+        viewModelScope.launch {
+            repository.toggleTodo(id, isCompleted)
+        }
+    }
+
+    fun deleteTodo(id: Int) {
+        viewModelScope.launch {
+            repository.deleteTodo(id)
+        }
+    }
+
+    fun clearCompletedTodos() {
+        viewModelScope.launch {
+            repository.clearCompletedTodos()
+        }
+    }
+
+    fun saveNote(content: String) {
+        viewModelScope.launch {
+            repository.saveNote(content)
+        }
+    }
+
+    fun upsertKpi(card: KpiCard) {
+        viewModelScope.launch {
+            repository.upsertKpi(card)
+        }
+    }
+
+    fun deleteKpi(id: String) {
+        viewModelScope.launch {
+            repository.deleteKpi(id)
+        }
+    }
+
+    fun queryJarvis(prompt: String) {
+        AmbientHubManager.queryJarvis(prompt)
+    }
+
+    fun dismissJarvisVisual() {
+        AmbientHubManager.dismissJarvisVisual()
+    }
+
+    fun toggleAmbientFullscreen(fullscreen: Boolean? = null) {
+        AmbientHubManager.toggleAmbientFullscreen(fullscreen)
+    }
+
+    fun updateMultimeter(telemetry: MultimeterTelemetry) {
+        AmbientHubManager.updateMultimeter(telemetry)
+    }
+
+    fun updateOscilloscope(telemetry: OscilloscopeTelemetry) {
+        AmbientHubManager.updateOscilloscope(telemetry)
+    }
 
     fun updateSettings(settings: StreamSettings) {
         viewModelScope.launch {

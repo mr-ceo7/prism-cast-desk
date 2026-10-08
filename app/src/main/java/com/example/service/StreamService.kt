@@ -103,7 +103,14 @@ class StreamService : Service() {
     override fun onCreate() {
         super.onCreate()
         val db = AppDatabase.getDatabase(this)
-        repository = StreamRepository(db.settingsDao(), db.sessionRecordDao(), db.motionLogDao())
+        repository = StreamRepository(
+            db.settingsDao(),
+            db.sessionRecordDao(),
+            db.motionLogDao(),
+            db.todoDao(),
+            db.notepadDao(),
+            db.kpiCardDao()
+        )
         mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
 
         createNotificationChannel()
