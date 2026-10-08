@@ -1,12 +1,12 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# 📡 Prism Cast
 
-# Prism Cast
+> **Secure, ultra-low latency wireless screen broadcasting with remote dashboards, motion alarms, and session recording.**
 
-Secure, ultra-low latency wireless screen broadcasting with remote dashboards, motion alarms, and session recording.
+[![Release](https://img.shields.io/github/v/release/mr-ceo7/prism-cast-desk?style=flat-square&color=blue)](https://github.com/mr-ceo7/prism-cast-desk/releases)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/mr-ceo7/prism-cast-desk/release-apk.yml?style=flat-square)](https://github.com/mr-ceo7/prism-cast-desk/actions)
+[![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Linux%20%7C%20Desktop-lightgrey?style=flat-square)](#)
 
-View your app in AI Studio: https://ai.studio/apps/840f71e6-97c2-488a-8c39-1dd71c0d12c7
+---
 
 ## Features
 
@@ -32,7 +32,7 @@ View your app in AI Studio: https://ai.studio/apps/840f71e6-97c2-488a-8c39-1dd71
 1. Open Android Studio
 2. Select **Open** and choose the directory containing this project
 3. Allow Android Studio to fix any incompatibilities as it imports the project
-4. Create a file named `.env` in the project directory and set `GEMINI_API_KEY` in that file to your Gemini API key (see `.env.example` for an example)
+4. Create a file named `.env` in the project directory and set `GEMINI_API_KEY` to your Gemini API key (see `.env.example` for reference)
 5. Remove this line from the app's `build.gradle.kts` file: `signingConfig = signingConfigs.getByName("debugConfig")`
 6. Run the app on an emulator or physical device
 
@@ -88,7 +88,7 @@ Tags must follow the `v<major>.<minor>.<patch>` format (e.g. `v1.0.0`, `v2.1.3`)
 
 ### GitHub Actions Secrets
 
-The release workflow requires the following secret in your GitHub repo settings:
+The release workflow accepts the following optional secret in your GitHub repo settings:
 
 | Secret | Description |
 |--------|-------------|
