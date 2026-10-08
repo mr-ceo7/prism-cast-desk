@@ -42,6 +42,11 @@ data class ScannedDevice(
     val isPasswordRequired: Boolean
 )
 
+data class StreamFrame(
+    val bitmap: Bitmap,
+    val timestamp: Long = System.nanoTime()
+)
+
 class ScreenStreamViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: StreamRepository
@@ -50,8 +55,8 @@ class ScreenStreamViewModel(application: Application) : AndroidViewModel(applica
     private val _playbackState = MutableStateFlow(PlaybackState.IDLE)
     val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
 
-    private val _playbackBitmap = MutableStateFlow<Bitmap?>(null)
-    val playbackBitmap: StateFlow<Bitmap?> = _playbackBitmap.asStateFlow()
+    private val _playbackBitmap = MutableStateFlow<StreamFrame?>(null)
+    val playbackBitmap: StateFlow<StreamFrame?> = _playbackBitmap.asStateFlow()
 
     private val _playbackError = MutableStateFlow<String?>(null)
     val playbackError: StateFlow<String?> = _playbackError.asStateFlow()
@@ -142,7 +147,7 @@ class ScreenStreamViewModel(application: Application) : AndroidViewModel(applica
         
         playbackJob = viewModelScope.launch(Dispatchers.IO) {
             var client: OkHttpClient? = null
-            var inputStream: BufferedInputStream? = null
+            var source: okio.BufferedSource? = null
             var response: Response? = null
             try {
                 var resolvedUrl = url.trim()
@@ -186,42 +191,49 @@ class ScreenStreamViewModel(application: Application) : AndroidViewModel(applica
                 }
                 
                 val body = response.body ?: throw IOException("Response body is empty")
-                inputStream = BufferedInputStream(body.byteStream())
+                source = body.source()
                 
                 _playbackState.value = PlaybackState.PLAYING
                 
-                val buffer = ByteArrayOutputStream()
-                var prevByte = -1
-                var inFrame = false
+                val soiBytes = okio.ByteString.of(0xFF.toByte(), 0xD8.toByte())
+                val eoiBytes = okio.ByteString.of(0xFF.toByte(), 0xD9.toByte())
+                var lastBitmap: Bitmap? = null
                 
                 while (this@launch.isActive) {
-                    val b = inputStream.read()
-                    if (b == -1) break
+                    val soiIndex = source.indexOf(soiBytes)
+                    if (soiIndex == -1L) break
                     
-                    if (inFrame) {
-                        buffer.write(b)
-                        if (prevByte == 0xFF && b == 0xD9) {
-                            val jpegBytes = buffer.toByteArray()
-                            val bitmap = BitmapFactory.decodeByteArray(jpegBytes, 0, jpegBytes.size)
-                            if (bitmap != null) {
-                                _playbackBitmap.value = bitmap
-                            }
-                            buffer.reset()
-                            inFrame = false
-                        }
-                        
-                        if (buffer.size() > 5 * 1024 * 1024) {
-                            buffer.reset()
-                            inFrame = false
-                        }
-                    } else {
-                        if (prevByte == 0xFF && b == 0xD8) {
-                            buffer.write(0xFF)
-                            buffer.write(0xD8)
-                            inFrame = true
+                    source.skip(soiIndex)
+                    
+                    val eoiIndex = source.indexOf(eoiBytes, 2)
+                    if (eoiIndex == -1L) break
+                    if (eoiIndex > 5 * 1024 * 1024) {
+                        source.skip(eoiIndex + 2)
+                        continue
+                    }
+                    
+                    val frameLength = eoiIndex + 2
+                    val frameBytes = source.readByteArray(frameLength)
+                    
+                    val options = BitmapFactory.Options().apply {
+                        inMutable = true
+                        if (lastBitmap != null && lastBitmap!!.isMutable) {
+                            inBitmap = lastBitmap
                         }
                     }
-                    prevByte = b
+                    
+                    val bitmap = try {
+                        BitmapFactory.decodeByteArray(frameBytes, 0, frameBytes.size, options)
+                    } catch (e: IllegalArgumentException) {
+                        lastBitmap = null
+                        val fallbackOptions = BitmapFactory.Options().apply { inMutable = true }
+                        BitmapFactory.decodeByteArray(frameBytes, 0, frameBytes.size, fallbackOptions)
+                    }
+                    
+                    if (bitmap != null) {
+                        lastBitmap = bitmap
+                        _playbackBitmap.value = StreamFrame(bitmap)
+                    }
                 }
                 
                 _playbackState.value = PlaybackState.IDLE
@@ -231,7 +243,7 @@ class ScreenStreamViewModel(application: Application) : AndroidViewModel(applica
                     _playbackError.value = e.localizedMessage ?: "Unknown connection error"
                 }
             } finally {
-                try { inputStream?.close() } catch (ignored: Exception) {}
+                try { source?.close() } catch (ignored: Exception) {}
                 try { response?.close() } catch (ignored: Exception) {}
             }
         }

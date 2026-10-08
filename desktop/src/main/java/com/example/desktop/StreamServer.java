@@ -33,6 +33,7 @@ public class StreamServer {
     private final AtomicReference<byte[]> latestFrame = new AtomicReference<>();
     private final AtomicInteger viewerCount = new AtomicInteger(0);
     private final CopyOnWriteArrayList<Thread> streamThreads = new CopyOnWriteArrayList<>();
+    private final Object frameLock = new Object();
 
     private int port;
     private boolean passwordEnabled;
@@ -55,18 +56,20 @@ public class StreamServer {
     public void setResolutionScale(float scale) { this.resolutionScale = scale; }
     public int getViewerCount() { return viewerCount.get(); }
 
-    /** Update the latest frame from the screen capture. */
     public void updateFrame(BufferedImage image) {
         if (image == null) return;
         try {
-            int w = Math.max(1, (int) (image.getWidth() * resolutionScale));
-            int h = Math.max(1, (int) (image.getHeight() * resolutionScale));
+            BufferedImage processedImage = image;
+            if (resolutionScale != 1.0f) {
+                int w = Math.max(1, (int) (image.getWidth() * resolutionScale));
+                int h = Math.max(1, (int) (image.getHeight() * resolutionScale));
 
-            BufferedImage resized = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
-            Graphics2D g = resized.createGraphics();
-            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-            g.drawImage(image, 0, 0, w, h, null);
-            g.dispose();
+                processedImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+                Graphics2D g = processedImage.createGraphics();
+                g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                g.drawImage(image, 0, 0, w, h, null);
+                g.dispose();
+            }
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
@@ -76,19 +79,22 @@ public class StreamServer {
                 param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
                 param.setCompressionQuality(jpegQuality);
                 writer.setOutput(new MemoryCacheImageOutputStream(baos));
-                writer.write(null, new IIOImage(resized, null, null), param);
+                writer.write(null, new IIOImage(processedImage, null, null), param);
                 writer.dispose();
             } else {
-                ImageIO.write(resized, "jpg", baos);
+                ImageIO.write(processedImage, "jpg", baos);
             }
             latestFrame.set(baos.toByteArray());
+            synchronized (frameLock) {
+                frameLock.notifyAll();
+            }
         } catch (IOException ignored) {}
     }
 
     /** Start the HTTP server. */
     public void start() throws IOException {
         server = HttpServer.create(new InetSocketAddress(port), 0);
-        server.setExecutor(java.util.concurrent.Executors.newCachedThreadPool());
+        server.setExecutor(java.util.concurrent.Executors.newFixedThreadPool(16));
 
         server.createContext("/", ex -> {
             if (passwordEnabled) {
@@ -142,9 +148,22 @@ public class StreamServer {
                 ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
                 ex.sendResponseHeaders(200, 0);
                 try (OutputStream os = ex.getResponseBody()) {
+                    byte[] lastSentFrame = null;
                     while (!Thread.currentThread().isInterrupted()) {
-                        byte[] frame = latestFrame.get();
+                        byte[] frame;
+                        synchronized (frameLock) {
+                            frame = latestFrame.get();
+                            if (frame == lastSentFrame) {
+                                try {
+                                    frameLock.wait(1000);
+                                } catch (InterruptedException e) {
+                                    throw e;
+                                }
+                                continue;
+                            }
+                        }
                         if (frame != null) {
+                            lastSentFrame = frame;
                             os.write((BOUNDARY + "\r\n").getBytes(StandardCharsets.UTF_8));
                             os.write("Content-Type: image/jpeg\r\n".getBytes(StandardCharsets.UTF_8));
                             os.write(("Content-Length: " + frame.length + "\r\n\r\n").getBytes(StandardCharsets.UTF_8));
@@ -152,7 +171,6 @@ public class StreamServer {
                             os.write("\r\n".getBytes(StandardCharsets.UTF_8));
                             os.flush();
                         }
-                        Thread.sleep(33);
                     }
                 }
             } catch (InterruptedException e) {

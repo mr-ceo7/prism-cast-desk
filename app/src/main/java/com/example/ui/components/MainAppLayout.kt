@@ -1487,6 +1487,41 @@ fun LocalImageFromPath(path: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
+fun StreamFramePresenter(
+    viewModel: ScreenStreamViewModel,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Fit,
+    contentDescription: String = "Active Stream View"
+) {
+    val playbackBitmap by viewModel.playbackBitmap.collectAsStateWithLifecycle()
+    
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        if (playbackBitmap != null) {
+            Image(
+                bitmap = playbackBitmap!!.bitmap.asImageBitmap(),
+                contentDescription = contentDescription,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = contentScale
+            )
+        } else {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                CircularProgressIndicator(color = SleekAccentLavender)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Waiting for stream video frame...",
+                    color = SleekTextSecondary,
+                    fontSize = 12.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun StreamPlayerScreen(
     viewModel: ScreenStreamViewModel,
     isFullscreen: Boolean,
@@ -1494,7 +1529,6 @@ fun StreamPlayerScreen(
 ) {
     val settings by viewModel.settingsState.collectAsStateWithLifecycle()
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
-    val playbackBitmap by viewModel.playbackBitmap.collectAsStateWithLifecycle()
     val playbackError by viewModel.playbackError.collectAsStateWithLifecycle()
     val scannedDevices by viewModel.scannedDevices.collectAsStateWithLifecycle()
     val isScanning by viewModel.isScanning.collectAsStateWithLifecycle()
@@ -1548,16 +1582,11 @@ fun StreamPlayerScreen(
                 .background(Color.Black),
             contentAlignment = Alignment.Center
         ) {
-            if (playbackBitmap != null) {
-                Image(
-                    bitmap = playbackBitmap!!.asImageBitmap(),
-                    contentDescription = "Fullscreen Stream View",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
-                )
-            } else {
-                CircularProgressIndicator(color = SleekAccentLavender)
-            }
+            StreamFramePresenter(
+                viewModel = viewModel,
+                modifier = Modifier.fillMaxSize(),
+                contentDescription = "Fullscreen Stream View"
+            )
 
             IconButton(
                 onClick = { onFullscreenToggle(false) },
@@ -1802,41 +1831,24 @@ fun StreamPlayerScreen(
                     Box(modifier = Modifier.fillMaxSize()) {
                         when (playbackState) {
                             PlaybackState.PLAYING -> {
-                                if (playbackBitmap != null) {
-                                    Image(
-                                        bitmap = playbackBitmap!!.asImageBitmap(),
-                                        contentDescription = "Active Stream View",
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Fit
+                                StreamFramePresenter(
+                                    viewModel = viewModel,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentDescription = "Active Stream View"
+                                )
+                                
+                                IconButton(
+                                    onClick = { onFullscreenToggle(true) },
+                                    modifier = Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .padding(12.dp)
+                                        .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Fullscreen,
+                                        contentDescription = "Enter Fullscreen",
+                                        tint = Color.White
                                     )
-                                    
-                                    IconButton(
-                                        onClick = { onFullscreenToggle(true) },
-                                        modifier = Modifier
-                                            .align(Alignment.BottomEnd)
-                                            .padding(12.dp)
-                                            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Fullscreen,
-                                            contentDescription = "Enter Fullscreen",
-                                            tint = Color.White
-                                        )
-                                    }
-                                } else {
-                                    Column(
-                                        modifier = Modifier.fillMaxSize(),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        CircularProgressIndicator(color = SleekAccentLavender)
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            text = "Waiting for stream video frame...",
-                                            color = SleekTextSecondary,
-                                            fontSize = 12.sp
-                                        )
-                                    }
                                 }
                             }
                             PlaybackState.CONNECTING -> {

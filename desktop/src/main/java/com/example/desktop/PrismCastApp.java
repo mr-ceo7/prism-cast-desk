@@ -27,7 +27,7 @@ public class PrismCastApp {
     private JFrame frame;
     private StreamServer server;
     private Robot robot;
-    private Timer captureTimer;
+    private Thread captureThread;
     private Timer statsTimer;
 
     // UI references
@@ -439,24 +439,46 @@ public class PrismCastApp {
         Rectangle bounds = GraphicsEnvironment.getLocalGraphicsEnvironment()
             .getDefaultScreenDevice().getDefaultConfiguration().getBounds();
 
-        captureTimer = new Timer(33, e -> {
-            BufferedImage capture = robot.createScreenCapture(bounds);
-            server.updateFrame(capture);
-            frameCount.incrementAndGet();
-
-            // Update preview
-            int pw = previewCard.getWidth() - 16;
-            int ph = previewCard.getHeight() - 16;
-            if (pw > 0 && ph > 0) {
-                Image scaled = capture.getScaledInstance(pw, ph, Image.SCALE_FAST);
-                previewLabel.setIcon(new ImageIcon(scaled));
-                previewLabel.setText(null);
-            }
-        });
-        captureTimer.start();
-
         streaming = true;
         streamStartTime.set(System.currentTimeMillis());
+
+        captureThread = new Thread(() -> {
+            while (streaming) {
+                long startTime = System.currentTimeMillis();
+                try {
+                    BufferedImage capture = robot.createScreenCapture(bounds);
+                    server.updateFrame(capture);
+                    frameCount.incrementAndGet();
+
+                    // Update UI preview safely on the Event Dispatch Thread (EDT)
+                    SwingUtilities.invokeLater(() -> {
+                        if (!streaming) return;
+                        int pw = previewCard.getWidth() - 16;
+                        int ph = previewCard.getHeight() - 16;
+                        if (pw > 0 && ph > 0) {
+                            Image scaled = capture.getScaledInstance(pw, ph, Image.SCALE_FAST);
+                            previewLabel.setIcon(new ImageIcon(scaled));
+                            previewLabel.setText(null);
+                        }
+                    });
+                } catch (Exception ex) {
+                    // Ignore errors during capture
+                }
+
+                long elapsed = System.currentTimeMillis() - startTime;
+                long sleepTime = 33 - elapsed;
+                if (sleepTime > 0) {
+                    try {
+                        Thread.sleep(sleepTime);
+                    } catch (InterruptedException ex) {
+                        break;
+                    }
+                }
+            }
+        });
+        captureThread.setName("PrismCast-CaptureThread");
+        captureThread.start();
+
         String url = server.getLocalUrl();
         urlField.setText(url);
         urlField.setForeground(Theme.LAVENDER);
@@ -468,13 +490,18 @@ public class PrismCastApp {
     }
 
     private void stopStreaming() {
-        if (captureTimer != null) {
-            captureTimer.stop();
-            captureTimer = null;
+        streaming = false;
+        if (captureThread != null) {
+            captureThread.interrupt();
+            try {
+                captureThread.join(500);
+            } catch (InterruptedException ex) {
+                // Ignore
+            }
+            captureThread = null;
         }
         server.stop();
 
-        streaming = false;
         streamStartTime.set(0);
         urlField.setText("http://localhost:" + port);
         urlField.setForeground(Theme.MUTED);
